@@ -1,0 +1,156 @@
+import xlsxwriter
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment,Color,colors,PatternFill,Border,Side
+from tkinter import *
+from tkinter import filedialog
+from tkinter import messagebox
+from os import path
+
+### 함수
+def export():
+    count = 0
+### xlsxwriter 라이브러리를 이용하여 새로운 엑셀파일을 생성
+    workbook = xlsxwriter.Workbook('FW_Policy.xlsx')
+    worksheet = workbook.add_worksheet()
+
+### 항목 정의
+    worksheet.write(0,0,'From Zone')
+    worksheet.write(0,1,'To Zone')
+    worksheet.write(0,2,'Policy')
+    worksheet.write(0,3,'Source Address')
+    worksheet.write(0,4,'Destination Address')
+    worksheet.write(0,5,'Application')
+    worksheet.write(0,6,'Action')
+    worksheet.write(0,7,'Status')
+
+### row = 열(세로) col = 행(가로) // 첫번째 열과 행을 초기화
+    row = 1
+    col = 0
+
+### 정책 값 추출
+    result = {}
+    index = 1
+    with open(file_path, 'r') as f:
+        for line in f.readlines():
+            line = line.replace("\n", "")
+            if "From zone" in line:
+                zone = line.split(",")
+                from_zone = zone[0].split(":")[1]
+                to_zone = zone[1].split(":")[1]
+            elif "Policy" in line:
+                policy = line.split(",")
+                policy_name = policy[0].split(":")[1]
+                status = policy[1].split(":")[1]
+            elif "Source addresses" in line:
+                src_address = line.split(":")
+                src_addr = src_address[1]
+            elif "Destination addresses" in line:
+                dst_address = line.split(":")
+                dst_addr = dst_address[1]
+            elif "Applications" in line:
+                application = line.split(":")
+                app = application[1]
+            elif "Action" in line:
+                l = line.split(":")[1]
+                action = l.split(',')[0]
+                result.update({index: {'from-zone': from_zone, 'to-zone': to_zone, 'policy-name': policy_name,
+                                       'Status': status, 'src_addr': src_addr, 'dst_addr': dst_addr, 'app': app,
+                                    'action': action}})
+                index = index + 1
+
+### result 딕셔너리에 있는 값을 호출하여 sheet에 추가
+
+    for i in result.keys():
+        worksheet.write(row,col,result[i]['from-zone'])
+        worksheet.write(row,col+1,result[i]['to-zone'])
+        worksheet.write(row,col+2,result[i]['policy-name'])
+        worksheet.write(row,col+3,result[i]['src_addr'])
+        worksheet.write(row,col+4,result[i]['dst_addr'])
+        worksheet.write(row,col+5,result[i]['app'])
+        worksheet.write(row,col+6,result[i]['action'])
+        worksheet.write(row,col+7,result[i]['Status'])
+
+        row = row + 1
+
+    workbook.close()
+
+### 생성된 엑셀파일 크기 조정
+
+    wb = load_workbook('FW_Policy.xlsx')
+    ws = wb.active
+
+    col_widths = {"A":12,"B":12,"C":18,"D":18,"E":18,"F":15,"G":15,"H":15} ## 각 칼럼에 대한 크기 값.
+
+    for col_name in col_widths:
+        ws.column_dimensions[col_name].width = col_widths[col_name]
+
+### A:H 칼럼에 대한 실선, 자동 줄바꿈 설정
+
+    for rows in ws["A":"H"]:
+        for cell in rows:
+            cell.alignment = Alignment(vertical='center',wrap_text=True)
+            cell.border = Border(left=Side(border_style="thin"), ## 왼쪽 실선
+                                right=Side(border_style="thin"), ## 오른쪽 실선
+                                top=Side(border_style="thin"), ## 위 실선
+                                bottom=Side(border_style="thin")) ## 아래 실선
+
+### 1열에 대한 가운데 정렬
+
+    for rows in ws["A1":"H1"]:
+        for cell in rows:
+            cell.alignment = Alignment(horizontal='center', vertical='center') ## 수평:가운데 수직:가운데
+
+            cell.fill = PatternFill(fill_type='solid',fgColor=Color('00FF9900')) ## 색상 지정
+
+            cell.border = Border(left=Side(border_style="thin"), ## 왼쪽 실선
+                                right=Side(border_style="thin"), ## 오른쪽 실선
+                                top=Side(border_style="thin"), ## 위 실선
+                                bottom=Side(border_style="double")) ## 아래 두줄
+
+    ws.freeze_panes = 'A2' #A2 기준으로 틀고정
+
+
+    wb.save('FW_Policy.xlsx')
+
+    count += 1
+    if count == 1:
+        messagebox.showinfo("알림","완료")
+
+
+### 팝업창 띄우기
+
+
+
+def imp():
+    global file_path
+    file_path = []
+    file = filedialog.askopenfilename(initialdir = path.dirname(__file__))
+    label2.config(text= file)
+    file_path = file
+
+
+
+
+### GUI 툴 제작
+root = Tk() ## 창 생성
+root.title("Juniper 방화벽 정책현황 추출") ## 제목 설정
+root.geometry("500x40") ## 가로 * 세로
+root.resizable(False,False) ##가로,세로 크기 조정 불가능
+
+label1 = Label(root, width=10, text="파일명 : ")
+label1.grid(column=0,row=1)
+
+label2 = Label(root, width=20, anchor="e", text="")
+label2.grid(column=1,row=1)
+
+## 파일 선택
+button1 = Button(root, width=10, text="파일선택", overrelief="solid", command=imp)
+button1.grid(column=4,row=1)
+
+## 엑셀파일로 추출하기 버튼
+button2 = Button(root, width=10, text="추출", overrelief="solid", command=export)
+button2.grid(column=5,row=1)
+
+
+
+root.mainloop() ## 사용자가 닫기 전까지 열려있도록 설정
