@@ -1,0 +1,61 @@
+import xlsxwriter
+import shlex
+
+file = open("policy.txt", 'r')
+data = file.readlines()
+workbook = xlsxwriter.Workbook('SRX-Policy.xlsx')
+worksheet = workbook.add_worksheet('Policy')
+
+row = 0
+col = 0
+temp = ""
+source_range = ""
+destination_range = ""
+application_range = ""
+
+worksheet.write(0, 0, 'from-zone')
+worksheet.write(0, 1, 'to-zone')
+worksheet.write(0, 2, 'name')
+worksheet.write(0, 3, 'source-address')
+worksheet.write(0, 4, 'destination-address')
+worksheet.write(0, 5, 'Application')
+worksheet.write(0, 6, 'action')
+worksheet.write(0, 7, 'description')
+
+for x in data:
+    policy_token = shlex.split(x)
+    if (policy_token[0] == "set"):
+        if (temp == policy_token[8]):
+            if (policy_token[10] == "source-address"):
+                source_range = (source_range + " " +  policy_token[11])
+                worksheet.write(row, 3, source_range)
+            if (policy_token[10] =="destination-address"):
+                destination_range = (destination_range + " " + policy_token[11])
+                worksheet.write(row, 4, destination_range)
+            if (policy_token[10] == "application"):
+                application_range = (application_range + " " + policy_token[11])
+                worksheet.write(row, 5, application_range)
+            if (policy_token[10] == "permit" or policy_token[10] == "deny"):
+                worksheet.write(row, 6, policy_token[10])
+        else:
+            temp = policy_token[8]
+            row += 1
+            source_range = ""
+            destination_range = ""
+            application_range = ""
+            worksheet.write(row,0,policy_token[4])
+            worksheet.write(row,1,policy_token[6])
+            worksheet.write(row,2,policy_token[8])
+            if (policy_token[9] == "description"):
+                worksheet.write(row, 7, policy_token[10])
+            if (policy_token[10] == "source-address"):
+                source_range = policy_token[11]
+                worksheet.write(row, 3, source_range)
+            if (policy_token[10] =="destination-address"):
+                destination_range = policy_token[11]
+                worksheet.write(row, 4, destination_range)
+            if (policy_token[10] == "application"):
+                application_range = policy_token[11]
+                worksheet.write(row, 5, application_range)
+
+workbook.close()
